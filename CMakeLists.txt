@@ -18,7 +18,17 @@ target_compile_features(SML INTERFACE
     cxx_user_literals
     cxx_variadic_templates)
 
+add_library(asio INTERFACE)
+    target_include_directories(asio INTERFACE asio/asio/include)
+    target_sources(asio INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/asio/asio/include)
+    target_compile_features(asio INTERFACE cxx_auto_type cxx_lambdas)
+    target_compile_options(asio INTERFACE
+            -Wno-suggest-override
+            -Wno-old-style-cast
+            -Wno-unused-variable
+            -DASIO_STANDALONE=1)
+
 
 add_library(masqotte
     masqotte.cpp)
-target_link_libraries(masqotte SML)
+target_link_libraries(masqotte asio SML)
