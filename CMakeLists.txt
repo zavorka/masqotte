@@ -28,7 +28,11 @@ add_library(asio INTERFACE)
             -Wno-unused-variable
             -DASIO_STANDALONE=1)
 
+add_library(GSL INTERFACE)
+    target_include_directories(GSL INTERFACE GSL)
+    target_sources(GSL INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/GSL)
+    target_compile_features(asio INTERFACE cxx_relaxed_constexpr)
 
 add_library(masqotte
     masqotte.cpp)
-target_link_libraries(masqotte asio SML)
+target_link_libraries(masqotte asio GSL SML)

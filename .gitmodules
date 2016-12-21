@@ -4,3 +4,6 @@
 [submodule "asio"]
 	path = asio
 	url = https://github.com/chriskohlhoff/asio
+[submodule "GSL"]
+	path = GSL
+	url = https://github.com/Microsoft/GSL
