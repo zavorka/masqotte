@@ -29,27 +29,8 @@ using topic_filter_list_t = std::vector<topic_filter_t>;
 using filters_t = topic_filter_list_t;
 using payload_t = gsl::span<gsl::byte>;
 
-namespace ev
+namespace packet
 {
-struct connect
-{
-    std::string client_id;
-};
-
-struct subscribe
-{
-    uint16_t packet_id;
-    filters_t filters;
-    payload_t subscribe;
-};
-
-struct unsubscribe
-{
-    uint16_t packet_id;
-    std::vector<std::string> filters;
-    payload_t unsubscribe;
-};
-
 struct pingreq
 {
 };
@@ -58,9 +39,10 @@ struct pingresp
 {
 };
 
-struct disconnect
+struct subscribe
 {
-    bool force;
+    uint16_t packet_id;
+    filters_t filters;
 };
 
 struct connack {
@@ -93,6 +75,40 @@ struct publish
     topic_t topic_name;
     payload_t payload;
 };
+}
+
+namespace ev
+{
+struct connect
+{
+    std::string client_id;
+};
+
+struct connack {
+    bool session_present;
+    uint8_t response_code;
+};
+
+struct subscribe
+{
+    uint16_t packet_id;
+    filters_t filters;
+    payload_t subscribe;
+};
+
+struct unsubscribe
+{
+    uint16_t packet_id;
+    std::vector<std::string> filters;
+    payload_t unsubscribe;
+};
+
+struct disconnect
+{
+    bool force;
+};
+
+
 
 struct publish_out
 {
@@ -106,9 +122,52 @@ struct shutdown_timeout
 
 namespace detail {
 template <typename Packet>
-std::vector<gsl::byte> serialize(Packet const& packet)
+std::vector<uint8_t> get_packet_buffer(Packet const& packet, uint16_t size)
 {
-    return {};
+    return std::vector<uint8_t>(packet.data(), size);
+}
+
+template <typename Packet>
+std::vector<uint8_t> serialize(Packet const& packet)
+{
+    auto variable_length = packet.get_variable_length();
+    // packet size : variable length + control header + encoded length size
+    uint16_t packet_size = variable_length + 1 + (int)(variable_length/128) + 1;
+    auto packet_data = get_packet_buffer(packet, packet_size);
+    serialize_impl(packet, std::back_inserter(packet_data), variable_length);
+    return packet_data;
+}
+
+constexpr uint16_t get_variable_length(packet::pingreq const &)
+{
+    return 0;
+}
+
+template <typename Iterator>
+Iterator serialize_impl(packet::subscribe const& packet, Iterator iter, int variable_length)
+{
+// control header
+    *iter++ = 0x82;
+    *(iter++) = variable_length >> 8;
+    *(iter++) = variable_length & 0xff;
+    *(iter++) = packet.packet_id >> 8;
+    *(iter++) = packet.packet_id & 0xff;
+    for(auto const & filter : packet.filters)
+    {
+        auto filter_size = std::get<0>(filter).size();
+        *(iter++) = filter_size >> 8;
+        *(iter++) = filter_size & 0xff;
+        *iter++ = static_cast<uint8_t>(std::get<1>(filter));
+    }
+    return iter;
+}
+
+template <typename Iterator>
+Iterator serialize_impl(packet::pingreq const &, Iterator iter, int)
+{
+    std::array<uint8_t , 2> bytes{0xc0, 0x00};
+    std::copy(bytes.cbegin(), bytes.cend(), iter);
+    return iter;
 }
 
 struct client_interface {
