@@ -216,16 +216,16 @@ public:
 
     void connect() {}
     void disconnect(bool force=false) {}
-    void subscribe(topic_filter_t filter, PublishHandler& handler) {}
-    void subscribe(topic_filter_list_t filter, PublishHandler& handler) {}
-    void unsubscribe(topic_filter_t filter, PublishHandler& handler) {}
-    void unsubscribe(topic_filter_list_t filter, PublishHandler& handler) {}
+    void subscribe(topic_filter_t filter) {}
+    void subscribe(topic_filter_list_t filter) {}
+    void unsubscribe(topic_filter_t filter) {}
+    void unsubscribe(topic_filter_list_t filter) {}
 
     template <typename F>
     void set_publish_handler(F&& handler) {
         m_publish_handler = PublishHandler(handler);
     }
-    void publish(topic_t topic, payload_t payload, qos_t qos, bool retain);
+    void publish(topic_t topic, payload_t payload, qos_t qos, bool retain) {};
 
 private:
     detail::client_interface_wrapper<Connection, Executor> m_client_interface;
